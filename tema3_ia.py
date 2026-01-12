@@ -127,3 +127,93 @@ print(
     .sort_values('lift', ascending=False)
     .head(10)
 )
+
+
+#  MAPARE COD FOODEX2 -> DENUMIRE ALIMENT
+
+# dictionar cod -> descriere ingredient
+food_dict = (
+    cons[['FOODEX2_INGR_CODE', 'FOODEX2_INGR_DESCR']]
+    .dropna()
+    .drop_duplicates()
+    .set_index('FOODEX2_INGR_CODE')['FOODEX2_INGR_DESCR']
+    .to_dict()
+)
+
+# functie pentru conversia codurilor din reguli in denumiri
+def decode_itemset(itemset):
+    return [food_dict.get(code, code) for code in itemset]
+
+# aplicam conversia doar pentru afisare
+rules_readable = rules.copy()
+rules_readable['antecedents_named'] = rules_readable['antecedents'].apply(decode_itemset)
+rules_readable['consequents_named'] = rules_readable['consequents'].apply(decode_itemset)
+
+# afisam regulile intr-o forma lizibila
+print(
+    rules_readable[
+        ['antecedents_named', 'consequents_named', 'support', 'confidence', 'lift']
+    ]
+    .sort_values('lift', ascending=False)
+    .head(10)
+)
+
+# AFISARE ELEGANTA A REGULILOR
+def format_rule(row):
+    antecedent = ", ".join(row['antecedents_named'])
+    consequent = ", ".join(row['consequents_named'])
+    return (
+        f"{antecedent}  ⇒  {consequent}\n"
+        f"   support = {row['support']:.3f}, "
+        f"confidence = {row['confidence']:.2f}, "
+        f"lift = {row['lift']:.2f}\n"
+    )
+
+top_rules = (
+    rules_readable
+    .sort_values('lift', ascending=False)
+    .head(10)
+)
+
+for _, row in top_rules.iterrows():
+    print(format_rule(row))
+
+
+
+
+
+#REGULI GENERATE
+# Wheat bread and rolls, white (refined flour), Sucrose (common sugar)  ⇒  Cocoa beverage-preparation, powder
+#    support = 0.056, confidence = 0.64, lift = 11.36
+
+# Cocoa beverage-preparation, powder  ⇒  Wheat bread and rolls, white (refined flour), Sucrose (common sugar)
+#    support = 0.056, confidence = 1.00, lift = 11.36
+
+# Cocoa beverage-preparation, powder, Sucrose (common sugar)  ⇒  Wheat bread and rolls, white (refined flour)
+#    support = 0.056, confidence = 1.00, lift = 10.42
+
+# Milk powder, full fat, SOURCE-COMMODITIES = Cow milk, whole, Chili peppers, PROCESS = Raw, no heat treatment, PROCESS = Boiling, QUALITATIVE-INFO = Red  ⇒  Wheat bread and rolls, white (refined flour)
+#    support = 0.056, confidence = 1.00, lift = 10.42
+
+# Cocoa beverage-preparation, powder  ⇒  Wheat bread and rolls, white (refined flour)
+#    support = 0.056, confidence = 1.00, lift = 10.42
+
+# Milk powder, full fat, SOURCE-COMMODITIES = Cow milk, whole  ⇒  Wheat bread and rolls, white (refined flour), Sucrose (common sugar)
+#    support = 0.064, confidence = 0.89, lift = 10.10
+
+# Wheat bread and rolls, white (refined flour), Sucrose (common sugar)  ⇒  Milk powder, full fat, SOURCE-COMMODITIES = Cow milk, whole
+#    support = 0.064, confidence = 0.73, lift = 10.10
+
+# Wheat bread and rolls, white (refined flour)  ⇒  Milk powder, full fat, SOURCE-COMMODITIES = Cow milk, whole
+#    support = 0.064, confidence = 0.67, lift = 9.26
+
+# Milk powder, full fat, SOURCE-COMMODITIES = Cow milk, whole, Sucrose (common sugar)  ⇒  Wheat bread and rolls, white (refined flour)
+#    support = 0.064, confidence = 0.89, lift = 9.26
+
+# Wheat bread and rolls, white (refined flour)  ⇒  Milk powder, full fat, SOURCE-COMMODITIES = Cow milk, whole, Sucrose (common sugar)
+#    support = 0.064, confidence = 0.67, lift = 9.26
+
+
+
+
+

@@ -179,7 +179,85 @@ for _, row in top_rules.iterrows():
     print(format_rule(row))
 
 
+# -------------------------------------------------------------------------------------------------------------------------------------
+# TOP ALIMENTE CONSUMATE DE FEMEI VS BARBATI 
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
 
+cons = pd.read_csv("consumption_user.csv")
+subjects = pd.read_csv("subject_user.csv")
+
+cons = cons[['SUBJECT', 'FOODEX2_INGR_DESCR', 'FOOD_AMOUNT_CONS']]
+subjects = subjects[['SUBJECT', 'SEX']]
+
+cons = cons[cons['FOOD_AMOUNT_CONS'] > 0]
+
+df = cons.merge(subjects, on='SUBJECT')
+df['SEX_LABEL'] = df['SEX'].map({1: 'Barbati', 2: 'Femei'})
+
+exclude_keywords = [
+    'salt', 'chili', 'pepper', 'spice', 'season',
+    'bouillon', 'stock cube', 'palm oil/fat'
+]
+
+df = df[~df['FOODEX2_INGR_DESCR'].str.lower()
+        .str.contains('|'.join(exclude_keywords), regex=True)]
+
+df['Ingredient'] = df['FOODEX2_INGR_DESCR'].apply(lambda x: x.split(',')[0])
+
+freq = (
+    df.groupby(['Ingredient', 'SEX_LABEL'])['SUBJECT']
+    .nunique()
+    .unstack(fill_value=0)
+)
+
+total_people = (
+    df[['SUBJECT', 'SEX_LABEL']]
+    .drop_duplicates()
+    .groupby('SEX_LABEL')
+    .size()
+)
+
+freq['Total'] = freq.sum(axis=1)
+freq = freq.sort_values('Total', ascending=False).head(10)
+
+freq['Femei (%)'] = freq['Femei'] / total_people['Femei'] * 100
+freq['Barbati (%)'] = freq['Barbati'] / total_people['Barbati'] * 100
+
+ingredient_ro = {
+    'Rice grain': 'Orez',
+    'Onions': 'Ceapă',
+    'Peanuts': 'Arahide',
+    'Mackerel': 'Macrou',
+    'Garlic': 'Usturoi',
+    'Tomatoes': 'Roșii',
+    'Ginger roots': 'Ghimbir',
+    'Taros': 'Taro',
+    'Plantains': 'Banane plantain',
+    'Leeks': 'Praz'
+}
+
+freq.index = freq.index.map(lambda x: ingredient_ro.get(x, x))
+
+x = np.arange(len(freq))
+width = 0.35
+
+plt.figure(figsize=(11,6))
+plt.bar(x - width/2, freq['Femei (%)'], width, label='Femei')
+plt.bar(x + width/2, freq['Barbati (%)'], width, label='Barbati')
+
+plt.xticks(x, freq.index, rotation=30, ha='right')
+plt.ylabel("Procent persoane (%)")
+plt.title("Top alimente consumate de femei vs barbati (fara condimente)")
+plt.legend()
+plt.grid(axis='y', linestyle='--', alpha=0.5)
+
+plt.tight_layout()
+plt.show()
+
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 #REGULI GENERATE
